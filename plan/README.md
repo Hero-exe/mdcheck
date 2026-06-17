@@ -1,23 +1,22 @@
-# mdcheck implementation plan
+# mdcheck 実装計画
 
-This document is a handoff plan for future agents working on `mdcheck`.
+このドキュメントは、今後 `mdcheck` を別のエージェントや開発者が実装・拡張するときの引き継ぎ用メモです。
 
-`mdcheck` is a Go CLI that checks Markdown articles for blog publishing quality:
-heading structure, empty links, image paths, character count, and front matter metadata.
+`mdcheck` は、ブログ記事の公開前チェックを目的とした Go 製 CLI です。Markdown 記事に対して、見出し構造、空リンク、画像パス、文字数、front matter のメタ情報を確認します。
 
-## Current Status
+## 現状
 
-- Initial CLI is implemented in Go with only the standard library.
-- Entry point: `cmd/mdcheck/main.go`
-- Main orchestration: `internal/app/run.go`
-- Markdown parser: `internal/markdown`
-- Rules: `internal/rules`
-- Report output: `internal/report`
-- Config loading: `internal/config`
-- Tests exist for Markdown parsing and core rules.
-- Module path is `github.com/Hero-exe/mdcheck`.
+- Go 標準ライブラリのみで初期 CLI を実装済み。
+- エントリーポイント: `cmd/mdcheck/main.go`
+- CLI 全体の制御: `internal/app/run.go`
+- Markdown 解析: `internal/markdown`
+- チェックルール: `internal/rules`
+- 出力処理: `internal/report`
+- 設定読み込み: `internal/config`
+- Markdown 解析と主要ルールのテストを追加済み。
+- module path は `github.com/Hero-exe/mdcheck`。
 
-Run checks with:
+動作確認:
 
 ```sh
 go test ./...
@@ -25,251 +24,250 @@ go run ./cmd/mdcheck README.md
 go run ./cmd/mdcheck --format json README.md
 ```
 
-## Public Repository Notes
+## 公開リポジトリとしての注意点
 
-- Do not commit `.cache/`, `outputs/`, `.DS_Store`, or built binaries.
-- No secrets or private config should be added.
-- A `LICENSE` file is not added yet. Add one before presenting this as reusable open source.
+- `.cache/`、`outputs/`、`.DS_Store`、ビルド済みバイナリはコミットしない。
+- 秘密情報、個人用設定、トークン類を追加しない。
+- まだ `LICENSE` がない。公開OSSとして見せる前に追加する。
 
-## Design Principles
+## 設計方針
 
-- Keep rules independent and easy to add.
-- Prefer clear findings over clever parsing.
-- Avoid external dependencies until they solve a real parser/config problem.
-- Keep CLI output stable enough for CI usage.
-- Text output is for humans; JSON output is for automation.
+- ルールは独立させ、追加しやすくする。
+- まずは分かりやすい検出結果を優先する。
+- 外部依存は、設定読み込みや Markdown 解析の品質を明確に上げる場合に追加する。
+- CI で使えるように、終了コードと JSON 出力は安定させる。
+- text 出力は人間向け、JSON 出力は自動化向けとして扱う。
 
-## Rule Interface
+## ルール追加の基本
 
-New checks should be implemented as rules under `internal/rules`.
+新しいチェックは `internal/rules` 配下に実装する。
 
-Each rule should:
+各ルールでやること:
 
-- implement `Name() string`
-- implement `Check(ctx Context, doc markdown.Document) []Finding`
-- return precise line numbers when possible
-- avoid exiting or printing directly
-- be added to `DefaultRules()` in `internal/rules/rule.go`
-- include focused tests
+- `Name() string` を実装する。
+- `Check(ctx Context, doc markdown.Document) []Finding` を実装する。
+- 可能な限り正確な行番号を返す。
+- ルール内で `os.Exit` や標準出力への直接出力をしない。
+- `internal/rules/rule.go` の `DefaultRules()` に追加する。
+- ルール単位のテストを追加する。
 
-## Priority Tasks
+## 優先タスク
 
-### 1. Add License
+### 1. LICENSE を追加する
 
-Goal:
-Make the public repository clearly reusable.
+目的:
+public リポジトリとして再利用しやすい状態にする。
 
-Suggested work:
+実装案:
 
-- Add `LICENSE`.
-- MIT is a reasonable default for a small CLI unless the owner wants another license.
-- Mention the license in `README.md`.
+- `LICENSE` を追加する。
+- 小さな CLI なので、特に希望がなければ MIT License が扱いやすい。
+- `README.md` にライセンス欄を追加する。
 
-Acceptance criteria:
+受け入れ条件:
 
-- `LICENSE` exists.
-- README includes a short license section.
+- `LICENSE` が存在する。
+- `README.md` からライセンスが分かる。
 
-### 2. Improve README for Public Users
+### 2. public 向けに README を拡充する
 
-Goal:
-Make the project understandable from GitHub.
+目的:
+GitHub を見た人が、インストール、実行、設定まで迷わず試せるようにする。
 
-Suggested work:
+実装案:
 
-- Add install instructions:
+- インストール手順を追加する。
   - `go install github.com/Hero-exe/mdcheck/cmd/mdcheck@latest`
-  - local development commands
-- Add example output.
-- Add config file example.
-- Add exit code behavior.
-- Add a short roadmap section.
+  - ローカル開発時の実行方法
+- 出力例を追加する。
+- 設定ファイル例を増やす。
+- 終了コードの説明を補足する。
+- 短いロードマップを追加する。
 
-Acceptance criteria:
+受け入れ条件:
 
-- A new user can install, run, and configure the CLI from the README alone.
+- README だけを読めば、インストール、実行、設定ができる。
 
-### 3. Add GitHub Actions CI
+### 3. GitHub Actions CI を追加する
 
-Goal:
-Run tests automatically on pull requests and pushes.
+目的:
+push と pull request で自動テストを走らせる。
 
-Suggested work:
+実装案:
 
-- Add `.github/workflows/ci.yml`.
-- Run `go test ./...`.
-- Use a stable Go version.
-- Optionally run `gofmt` check.
+- `.github/workflows/ci.yml` を追加する。
+- `go test ./...` を実行する。
+- 安定版の Go を使う。
+- 可能なら `gofmt` チェックも入れる。
 
-Acceptance criteria:
+受け入れ条件:
 
-- CI runs on `push` and `pull_request`.
-- CI fails if tests fail.
-- CI fails if formatting is not gofmt-compliant.
+- `push` と `pull_request` で CI が走る。
+- テスト失敗時に CI が失敗する。
+- gofmt されていない場合に CI が失敗する。
 
-### 4. Replace Ad Hoc Config Parsing
+### 4. 設定ファイル読み込みを本物の YAML パーサに置き換える
 
-Goal:
-Support real YAML config more reliably.
+目的:
+`mdcheck.yaml` をより自然に書けるようにする。
 
-Current limitation:
-`internal/config` uses a small line-based parser. It handles the current examples but is not a full YAML parser.
+現状の制約:
+`internal/config` は小さな行ベースのパーサで、現在のサンプルは読めるが完全な YAML パーサではない。
 
-Suggested work:
+実装案:
 
-- Add `gopkg.in/yaml.v3` or another maintained YAML parser.
-- Preserve the current config shape.
-- Keep defaults when no config exists.
-- Add config tests for:
-  - missing file
-  - rule severity override
-  - metadata required override
-  - word count min/max
-  - ignore patterns
+- `gopkg.in/yaml.v3` など、メンテナンスされている YAML パーサを追加する。
+- 現在の設定形式は維持する。
+- 設定ファイルがない場合はデフォルト値を使う。
+- 次のテストを追加する。
+  - 設定ファイルなし
+  - ルール重要度の上書き
+  - 必須メタ情報の上書き
+  - 文字数の min/max
+  - ignore pattern
 
-Acceptance criteria:
+受け入れ条件:
 
-- Existing config examples still work.
-- More realistic YAML, including comments and lists, is handled correctly.
+- 既存の設定例がそのまま動く。
+- コメントやリストを含む、より自然な YAML を扱える。
 
-### 5. Improve Markdown Parsing
+### 5. Markdown 解析を強化する
 
-Goal:
-Reduce false positives and support more Markdown syntax.
+目的:
+誤検出を減らし、より多くの Markdown 記法に対応する。
 
-Current limitation:
-`internal/markdown` uses regular expressions and simple line scanning.
+現状の制約:
+`internal/markdown` は正規表現と行走査で実装されている。
 
-Suggested work:
+実装案:
 
-- Consider `github.com/yuin/goldmark` for Markdown AST parsing.
-- Preserve current `markdown.Document` as the internal contract if possible.
-- Support:
-  - reference links
-  - autolinks
-  - Markdown links with titles
-  - images with titles
-  - nested emphasis without confusing link detection
+- `github.com/yuin/goldmark` の AST 利用を検討する。
+- 可能であれば、現在の `markdown.Document` を内部契約として維持する。
+- 次の記法に対応する。
+  - reference-style link
+  - autolink
+  - title 付き Markdown link
+  - title 付き image
+  - ネストした emphasis を含む link
 
-Acceptance criteria:
+受け入れ条件:
 
-- Existing tests pass.
-- New tests cover reference-style links and image titles.
-- Fenced code blocks are still ignored.
+- 既存テストが通る。
+- reference-style link と image title のテストが追加されている。
+- fenced code block 内は引き続き無視される。
 
-### 6. Add Image Alt Text Rule
+### 6. 画像 alt テキストルールを追加する
 
-Goal:
-Warn when blog images have no alt text.
+目的:
+alt のない画像を検出し、ブログ記事の読みやすさとアクセシビリティを上げる。
 
-Suggested work:
+実装案:
 
-- Add `image_alt` rule.
-- Detect `![](path.png)` and `![   ](path.png)`.
-- Make default severity `warn`.
-- Add config support via existing severity mechanism.
+- `image_alt` ルールを追加する。
+- `![](path.png)` と `![   ](path.png)` を検出する。
+- デフォルト重要度は `warn` にする。
+- 既存の severity 設定で `off` にできるようにする。
 
-Acceptance criteria:
+受け入れ条件:
 
-- Empty alt text produces a finding.
-- Non-empty alt text does not.
-- Rule can be disabled with `image_alt: off`.
+- 空の alt text が finding になる。
+- alt text がある画像は finding にならない。
+- `image_alt: off` で無効化できる。
 
-### 7. Add Title Length Rule
+### 7. タイトル長チェックを追加する
 
-Goal:
-Help blog posts keep metadata titles readable.
+目的:
+front matter の `title` が長すぎないか確認できるようにする。
 
-Suggested work:
+実装案:
 
-- Add `title_length` rule.
-- Check front matter `title`.
-- Add config:
+- `title_length` ルールを追加する。
+- front matter の `title` をチェックする。
+- 設定を追加する。
   - `title_length.min`
   - `title_length.max`
-- Default suggestion: max 60 characters.
+- デフォルトは max 60 文字程度を候補にする。
 
-Acceptance criteria:
+受け入れ条件:
 
-- Missing title remains covered by metadata rule.
-- Too-long title produces a finding.
-- Config can change max length.
+- `title` がない場合は既存の metadata ルールが担当する。
+- 長すぎる title が finding になる。
+- 設定で最大文字数を変更できる。
 
-### 8. Add Internal Link Rule
+### 8. 内部リンクチェックを追加する
 
-Goal:
-Catch broken local Markdown links.
+目的:
+記事内のローカルリンク切れを検出する。
 
-Suggested work:
+実装案:
 
-- Add `internal_link` rule.
-- Ignore remote URLs.
-- Resolve relative paths from the current document directory.
-- Support anchor-only links like `#section`.
-- For file links with anchors, check file existence first.
+- `internal_link` ルールを追加する。
+- remote URL は無視する。
+- 相対パスは現在の Markdown ファイルのディレクトリ基準で解決する。
+- `#section` のようなページ内アンカーを扱う。
+- `file.md#section` のようなリンクは、まずファイルの存在を確認する。
 
-Acceptance criteria:
+受け入れ条件:
 
-- Missing local file links are reported.
-- Remote links are ignored.
-- Existing files are accepted.
+- 存在しないローカルファイルリンクが finding になる。
+- remote URL は無視される。
+- 存在するファイルへのリンクは許可される。
 
-### 9. Add Better Exit Code Tests
+### 9. 終了コードまわりのテストを追加する
 
-Goal:
-Make CI behavior stable.
+目的:
+CI での利用に必要な挙動を安定させる。
 
-Suggested work:
+実装案:
 
-- Add tests around `internal/app.Run`.
-- Verify:
-  - no error findings returns nil
-  - error findings return `ExitCodeError{Code: 1}`
-  - invalid format returns a normal error
-  - JSON output is valid
+- `internal/app.Run` のテストを追加する。
+- 次を確認する。
+  - error finding がなければ nil を返す。
+  - error finding があれば `ExitCodeError{Code: 1}` を返す。
+  - 不正な format は通常の error を返す。
+  - JSON 出力が valid JSON になる。
 
-Acceptance criteria:
+受け入れ条件:
 
-- App-level behavior is tested without invoking `os.Exit`.
+- `os.Exit` を呼ばずに app-level の挙動をテストできる。
 
-### 10. Prepare Releases
+### 10. リリース準備をする
 
-Goal:
-Make the CLI easy to install as a binary.
+目的:
+CLI をバイナリとして導入しやすくする。
 
-Suggested work:
+実装案:
 
-- Add GoReleaser config or a simple GitHub Actions release workflow.
-- Build binaries for:
+- GoReleaser 設定、またはシンプルな GitHub Actions の release workflow を追加する。
+- 次のバイナリを作る。
   - macOS arm64
   - macOS amd64
   - Linux amd64
   - Linux arm64
-- Add checksums.
+- checksums を出力する。
 
-Acceptance criteria:
+受け入れ条件:
 
-- Tagged release builds downloadable binaries.
-- README explains install options.
+- tag を打つとダウンロード可能なバイナリが作られる。
+- README にインストール方法が書かれている。
 
-## Nice-To-Have Tasks
+## あると便利なタスク
 
-- Add `--quiet`.
-- Add `--fail-on warn`.
-- Add `--no-color` and colored text output.
-- Add `--ignore` CLI flag.
-- Add `--rule` CLI flag for running a subset of rules.
-- Add SARIF output for GitHub code scanning.
-- Add `mdcheck init` to generate `mdcheck.yaml`.
-- Add Japanese README section or `README.ja.md`.
+- `--quiet` を追加する。
+- `--fail-on warn` を追加する。
+- `--no-color` と色付き text 出力を追加する。
+- `--ignore` CLI flag を追加する。
+- `--rule` CLI flag で一部ルールだけ実行できるようにする。
+- GitHub code scanning 向けに SARIF 出力を追加する。
+- `mdcheck init` で `mdcheck.yaml` を生成する。
 
-## Suggested First Issue Set
+## 最初に切るとよさそうな Issue
 
-For another agent, a good first batch is:
+最初の別エージェント向けタスクとしては、次の順番が扱いやすい。
 
-1. Add `LICENSE`.
-2. Expand `README.md`.
-3. Add GitHub Actions CI.
-4. Add `image_alt` rule.
+1. `LICENSE` を追加する。
+2. `README.md` を public 向けに拡充する。
+3. GitHub Actions CI を追加する。
+4. `image_alt` ルールを追加する。
 
-These are independent, low-risk, and improve the public repository immediately.
+これらは互いに独立していて、リスクが低く、public リポジトリとしての見栄えと実用性をすぐに上げられる。
