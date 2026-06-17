@@ -30,6 +30,58 @@ go run ./cmd/mdcheck --format json README.md
 - 秘密情報、個人用設定、トークン類を追加しない。
 - まだ `LICENSE` がない。公開OSSとして見せる前に追加する。
 
+## GitHub 側でやっておく設定
+
+### LICENSE の追加場所
+
+GitHub の画面から追加する場合:
+
+1. GitHub で `Hero-exe/mdcheck` のリポジトリを開く。
+2. ファイル一覧の上にある `Add file` を押す。
+3. `Create new file` を選ぶ。
+4. ファイル名に `LICENSE` または `LICENSE.md` と入力する。
+5. ファイル名欄の下に出る `Choose a license template` を押す。
+6. 左側の一覧からライセンスを選ぶ。
+7. `Review and submit` を押す。
+8. `Commit changes...` からコミットする。
+
+小さな Go CLI なら、特にこだわりがなければ MIT License が扱いやすい候補。
+
+参考:
+https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-license-to-a-repository
+
+### public リポジトリ向けの推奨設定
+
+GitHub の `Settings` から次を確認する。
+
+- `General`
+  - Description を設定する。
+  - Topics に `go`, `markdown`, `cli`, `blog`, `linter` などを入れる。
+  - Wiki を使わないなら無効化する。
+  - Discussions は必要になるまで無効でもよい。
+- `Security` / `Code security`
+  - Dependency graph を有効にする。
+  - Dependabot alerts を有効にする。
+  - Dependabot security updates を有効にする。
+  - Secret scanning を有効にする。
+  - Push protection を有効にする。
+- `Rules` / `Rulesets`
+  - `main` への force push を禁止する。
+  - `main` の削除を禁止する。
+  - CI 追加後は required status checks を有効にする。
+  - 必要なら PR 経由の変更を必須にする。
+- `Actions`
+  - GitHub Actions を有効にする。
+  - CI workflow 追加後、`go test ./...` と `gofmt` チェックを走らせる。
+
+設定の優先順:
+
+1. `LICENSE` を追加する。
+2. Security / Code security の機能を有効化する。
+3. GitHub Actions CI を追加する。
+4. `main` の ruleset を設定する。
+5. README、Issue template、PR template を整備する。
+
 ## 設計方針
 
 - ルールは独立させ、追加しやすくする。
